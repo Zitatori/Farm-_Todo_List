@@ -36,17 +36,16 @@ const TYPE_TO_ANIMAL = {
 function zoneRects() {
   return {
     chicken: { x:  40, y: 265, w: 320, h: 135 },
-    cow:     { x: 510, y: 100, w: 320, h: 135 }, // ← 265 → 235
+    cow:     { x: 510, y: 265, w: 320, h: 135 },
     sheep:   { x:  70, y: 420, w: 320, h:  90 },
-    rabbit:  { x: 510, y: 100, w: 320, h:  90 }, // ← 420 → 390
+    rabbit:  { x: 510, y: 420, w: 320, h:  90 },
   };
 }
-
 
 // 矩形内で重なり回避しつつランダム配置
 function findFreeSpotInRect(existing, rect, w, h) {
   for (let i = 0; i < 60; i++) {
-    const x = Mat　h.floor(rect.x + Math.random() * (rect.w - w));
+    const x = Math.floor(rect.x + Math.random() * (rect.w - w));
     const y = Math.floor(rect.y + Math.random() * (rect.h - h));
     const box = { x, y, w, h };
     const hit = existing.some(o => !(box.x+box.w<o.x || o.x+o.w<box.x || box.y+box.h<o.y || o.y+o.h<box.y));
@@ -179,29 +178,20 @@ function drawFarm() {
   });
 
   // ゾーン枠を上描き表示するため、drawFarmをラップ
-  // ゾーン枠を上描き表示するため、drawFarmをラップ
-const _drawFarm = drawFarm;
-drawFarm = function(){
-  _drawFarm();
-
-  const labelMap = {
-    chicken: "Programming 🐔",
-    cow:     "Sport 🐄",
-    sheep:   "House 🐑",
-    rabbit:  "Kids 🐇",
+  const _drawFarm = drawFarm;
+  drawFarm = function(){
+    _drawFarm();
+    for (const [k,r] of Object.entries(ZONES)) {
+      ctx.save();
+      ctx.strokeStyle = "rgba(0,0,0,.35)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(r.x, r.y, r.w, r.h);
+      ctx.fillStyle = "rgba(0,0,0,.6)";
+      ctx.font = "14px system-ui";
+      ctx.fillText(labelMap[k] || k, r.x + 6, r.y + 18);
+      ctx.restore();
+    }
   };
-
-  for (const [k, r] of Object.entries(ZONES)) {
-    ctx.save();
-    ctx.strokeStyle = "rgba(0,0,0,.35)";
-    ctx.lineWidth = 2;
-    ctx.strokeRect(r.x, r.y, r.w, r.h);
-    ctx.fillStyle = "rgba(0,0,0,.6)";
-    ctx.font = "14px system-ui";
-    ctx.fillText(labelMap[k] || k, r.x + 6, r.y + 18); // ← ここだけ置換
-    ctx.restore();
-  }
-};
 
   // zoneRects を ZONES を返す版に一時差し替えたい場合はこれでもOK
   // (既存の zoneRects() はそのままでOKなら無視)
