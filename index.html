@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Farm Todo</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial; text-align: center; margin: 0; }
+    #farm { border: 2px solid #333; display: block; margin: 16px auto; max-width: 100%; height: auto; }
+    ul { list-style: none; padding: 0; margin: 10px auto 20px; max-width: 680px; text-align: left; }
+    li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 12px; border: 1px solid #eee; border-radius: 12px; margin: 6px 0; }
+    .done { opacity: .55; text-decoration: line-through; }
+    .task-container { display: flex; justify-content: center; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    #taskInput { padding: 10px 15px; border-radius: 25px; border: 2px solid #4CAF50; outline: none; font-size: 1em; transition: .3s; min-width: 260px; }
+    #taskInput:focus { border-color: #81C784; box-shadow: 0 0 8px rgba(129,199,132,.5); }
+    #taskType { padding: 10px 12px; border-radius: 18px; border: 1px solid #cfd8dc; }
+    .btn { padding: 10px 20px; border-radius: 25px; border: none; background: linear-gradient(45deg, #4CAF50, #81C784); color: white; font-size: 1em; cursor: pointer; transition: .3s; }
+    .btn:hover { filter: brightness(1.07); }
+    .done-btn { padding: 8px 16px; border-radius: 25px; border: none; background: linear-gradient(45deg, #FFB74D, #FF8A65); color: white; font-weight: bold; cursor: pointer; transition: transform .2s, box-shadow .2s; margin-left: 10px; font-size: 1em; }
+    .done-btn:hover { transform: scale(1.1); box-shadow: 0 6px 12px rgba(0,0,0,.25); }
+    .fancy-title {
+      font-family: 'Cursive', 'Arial', sans-serif;
+      font-size: 3em; margin: 24px 0 8px;
+      background: linear-gradient(90deg, #FFE57F, #FFB74D);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+      animation: bounce 2s infinite;
+    }
+    @keyframes bounce { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-10px) } }
+    .hint { color:#777; font-size:.9rem; }
+  </style>
+</head>
+<body>
+  <h1 class="fancy-title">Farm Todo List</h1>
+
+  <!-- タスク入力欄 -->
+  <div class="task-container">
+    <input type="text" id="taskInput" placeholder="Put your task" />
+    <select id="taskType" title="Task type">
+      <option value="study">Programming💻</option>
+      <option value="work">Sport🏋🏻</option>
+      <option value="house">House🏠</option>
+      <option value="health">Kids👶🏻</option>
+    </select>
+    <button class="btn" id="addTask">Add</button>
+  </div>
+
+  <!-- タスクリスト -->
+  <ul id="taskList"></ul>
+
+  <!-- 農場キャンバス -->
+  <canvas id="farm" width="900" height="520"></canvas>
+  <div class="hint">タスクを完了すると、動物が増えるよ（種別で変わる）。</div>
+
+  <script>
+    const canvas = document.getElementById("farm");
+    const ctx = canvas.getContext("2d");
+
+    // 画像
+    const bg = new Image(); bg.src = "images/fields.png";
+    const IMAGES = { chicken:new Image(), cow:new Image(), rabbit:new Image(), sheep:new Image() };
+    IMAGES.chicken.src = "images/chicken.png";
+    IMAGES.cow.src     = "images/cow.png";
+    IMAGES.rabbit.src  = "images/rabbit.png";
+    IMAGES.sheep.src   = "images/sheep.png";
+
+    // タスク種別→動物
+    const TYPE_TO_ANIMAL = { study:"chicken", work:"cow", house:"sheep", health:"rabbit" };
+
+    // 状態
+    const animals = [];             // {imgKey, x, y, w, h}
+    const ANIMAL_SIZE = 72;
+
+    // 描画
+    function drawFarm() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
+      animals.forEach(a => {
+        const img = IMAGES[a.imgKey] || IMAGES.chicken;
+        ctx.drawImage(img, a.x, a.y, a.w, a.h);
+      });
+    }
+    bg.onload = drawFarm;
+
+    // タスク追加
+    document.getElementById("addTask").addEventListener("click", addTask);
+    document.getElementById("taskInput").addEventListener("keydown", e => {
+      if (e.key === "Enter") addTask();
+    });
+
+    function addTask() {
+      const input = document.getElementById("taskInput");
+      const typeSel = document.getElementById("taskType");
+      const text = input.value.trim();
+      if (!text) return;
+
+      const li = document.createElement("li");
+
+      const left = document.createElement("span");
+      left.textContent = text + " ";
+      const badge = document.createElement("span");
+      badge.textContent = typeSel.options[typeSel.selectedIndex].textContent;
+      badge.style.fontSize = ".8rem";
+      badge.style.color = "#155724";
+      badge.style.background = "#d4edda";
+      badge.style.padding = "2px 8px";
+      badge.style.borderRadius = "999px";
+      left.appendChild(badge);
+
+      const btn = document.createElement("button");
+      btn.textContent = "🐥 Done!";
+      btn.className = "done-btn";
+
+      // 完了時：線で消して、種別に応じた動物をスポーン
+      btn.addEventListener("click", () => {
+        li.classList.add("done");
+        btn.disabled = true;
+        const animalKey = TYPE_TO_ANIMAL[typeSel.value] || "chicken";
+        addAnimal(animalKey);
+      });
+
+      const right = document.createElement("div"); right.appendChild(btn);
+      li.appendChild(left); li.appendChild(right);
+      document.getElementById("taskList").appendChild(li);
+      input.value = "";
+    }
+
+    function addAnimal(imgKey) {
+      const pos = findFreeSpot();
+      animals.push({ imgKey, x: pos.x, y: pos.y, w: ANIMAL_SIZE, h: ANIMAL_SIZE });
+      drawFarm();
+    }
+
+    // 下半分の地面にランダム配置（重なり軽減）
+    function findFreeSpot() {
+      const margin = 50;
+      const groundTop = Math.floor(canvas.height * 0.52);
+      const maxX = canvas.width - margin - ANIMAL_SIZE;
+      const maxY = canvas.height - margin - ANIMAL_SIZE;
+
+      for (let i = 0; i < 60; i++) {
+        const x = rand(margin, maxX);
+        const y = rand(groundTop, maxY);
+        const box = { x, y, w: ANIMAL_SIZE, h: ANIMAL_SIZE };
+        if (!animals.some(a => overlap(box, a))) return { x, y };
+      }
+      // 妥協
+      return { x: rand(margin, maxX), y: rand(groundTop, maxY) };
+    }
+    function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+    function overlap(a, b) {
+      return !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
+    }
+  </script>
+</body>
+</html>
